@@ -1,1 +1,1 @@
-deploy haproxy-2.2.3-2.el8.x86_64
+Install and configure HAProxy 2.2.3

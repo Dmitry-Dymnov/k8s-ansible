@@ -1,1 +1,1 @@
-Run Docker
+Install and configure Docker

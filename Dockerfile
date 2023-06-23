@@ -25,11 +25,10 @@ RUN pip3 install --upgrade \
  && pip3 install \
         ansible \
         ansible-lint \
- && apk del \
-        .build-deps \
- && rm -rf /var/cache/apk/* \
  && wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O  \
         /usr/local/bin/yq \
+ && apk del .build-deps \
+ && rm -rf /var/cache/apk/* \
  && chmod +x /usr/local/bin/yq 
 
 RUN mkdir -p /etc/ansible /root/.ssh \

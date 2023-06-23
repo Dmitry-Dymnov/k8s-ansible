@@ -1,0 +1,39 @@
+---
+variables:
+  ANSIBLE_INVENTORY: "ansible/inventory"
+  ANSIBLE_ROLES_PATH: "ansible/roles"
+image: harbor.local:80/s-devops/ansible:1.0
+
+stages:
+  - verify
+  - deploy
+
+before_script:
+  - export ANSIBLE_HOST_KEY_CHECKING=False
+  - export ANSIBLE_DEPRECATION_WARNINGS=False
+  - export ANSIBLE_INVENTORY
+  - export ANSIBLE_ROLES_PATH
+  - curl -s -H "Content-Type: application/json" -H "X-Vault-Token: \
+      $(curl -s --request POST --data '{"role_id":"'"$VAULT_ROLE_ID"'","secret_id":"'"$VAULT_SECRET_ID"'"}' \
+      $VAULT_URL/v1/auth/approle/login | jq -r .auth.client_token)" \
+      $VAULT_URL/v1/secret/gitlab-ci/ansible/config | jq -r .data.idrsapub > /root/.ssh/id_rsa.pub
+  - curl -s -H "Content-Type: application/json" -H "X-Vault-Token: \
+      $(curl -s --request POST --data '{"role_id":"'"$VAULT_ROLE_ID"'","secret_id":"'"$VAULT_SECRET_ID"'"}' \
+      $VAULT_URL/v1/auth/approle/login | jq -r .auth.client_token)" \
+      $VAULT_URL/v1/secret/gitlab-ci/ansible/config | jq -r .data.idrsa > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa
+  - 'chmod +x ./ansible/scripts/*.sh'
+  - 'find ./ansible/scripts/ -name "*.sh" -exec {} \;'
+
+ansible-verify:
+  stage: verify
+  script:
+    - 'cat ./ansible/inventory/inventory.yml'
+    - ansible-playbook --syntax-check ansible/*.yml
+  allow_failure: true
+
+ansible-deploy:
+  stage: deploy
+  when: manual
+  script:
+    - ansible-playbook ansible/*.yml
+  allow_failure: true

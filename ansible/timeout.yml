@@ -1,0 +1,40 @@
+- hosts: timeout
+  gather_facts: yes
+  become: yes
+  tasks:
+  - lineinfile:
+      dest: /etc/profile
+      state: present
+      regexp: 'TMOUT'
+      line: 'export readonly TMOUT=10800'
+    ignore_errors: yes  
+
+  - lineinfile:
+      dest: /etc/bashrc
+      state: present
+      regexp: 'TMOUT'
+      line: 'export readonly TMOUT=10800'
+    ignore_errors: yes 
+
+  - lineinfile:
+        dest: /etc/ssh/sshd_config
+        state: present
+        regexp: 'ClientAliveInterval'
+        line: 'ClientAliveInterval 180m'
+    notify: restart_sshd
+    when: ansible_os_family == "RedHat"
+
+  - lineinfile:
+        dest: /etc/ssh/sshd_config
+        state: present
+        regexp: 'ClientAliveInterval'
+        line: 'ClientAliveInterval 180m'
+    notify: restart_ssh
+    when: ansible_os_family == "Debian"
+
+  handlers:
+    - name: restart_ssh
+      service: name=ssh state=restarted
+    - name: restart_sshd
+      service: name=sshd state=restarted
+

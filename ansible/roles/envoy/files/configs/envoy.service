@@ -1,0 +1,20 @@
+[Unit]
+Description=Envoy Proxy
+Requires=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=envoy
+Group=envoy
+ExecStart=/usr/local/bin/hot-restarter.py /usr/local/bin/start_envoy.sh
+ExecReload=/bin/kill -HUP $MAINPID
+ExecStop=/bin/kill -TERM $MAINPID
+Restart=always
+RestartSec=5
+LimitNOFILE=100000
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

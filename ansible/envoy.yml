@@ -1,0 +1,5 @@
+- hosts: envoy
+  gather_facts: yes
+  become: yes
+  roles:
+    - envoy

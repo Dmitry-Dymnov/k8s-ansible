@@ -1,0 +1,22 @@
+---
+- name: Load a variable for {{inventory_hostname}}
+  ansible.builtin.include_vars: "{{inventory_hostname}}"
+
+- name: Add rule firewall for {{inventory_hostname}}
+  iptables:
+    chain: INPUT
+    protocol: all
+    source: "{{ item }}"
+    ctstate: NEW
+    jump: ACCEPT
+    action: insert
+  loop: "{{ iptables_list | list }}"
+
+- name: Add rule firewall for {{inventory_hostname}} to /etc/iptables.rules
+  blockinfile:
+    path: /etc/iptables.rules
+    marker: "### {mark} Managed by Ansible for {{inventory_hostname}} ###"
+    block: |
+      {% for item in iptables_list -%}
+      iptables -A INPUT -p all -s {{ item }} -m state --state NEW -j ACCEPT
+      {% endfor %}

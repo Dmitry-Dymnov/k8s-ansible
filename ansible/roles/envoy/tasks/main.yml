@@ -1,0 +1,3 @@
+- name: "Play task for the current OS"
+  include: "{{ ansible_distribution }}.yml"
+  when: ansible_distribution == "OracleLinux"

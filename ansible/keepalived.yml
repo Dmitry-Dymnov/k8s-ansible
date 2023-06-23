@@ -1,0 +1,4 @@
+- hosts: keepalived
+  gather_facts: yes
+  roles:
+    - keepalived

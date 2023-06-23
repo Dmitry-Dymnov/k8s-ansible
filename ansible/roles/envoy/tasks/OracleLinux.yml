@@ -1,0 +1,190 @@
+---
+- name: "Check if envoy package is installed"
+  command: rpm -q getenvoy-envoy
+  register: package_check
+  changed_when: false
+  ignore_errors: true
+
+- name: "remove immutable /etc/sysctl.conf"
+  file:
+    path: /etc/sysctl.conf
+    attr: -i
+  when: package_check is failed
+
+- name: "remove immutable /etc/sysctl.d"
+  file:
+    path: /etc/sysctl.d
+    attr: -i
+  when: package_check is failed
+
+- name: Set vm.swappiness to 10
+  sysctl:
+    name: vm.swappiness
+    value: '10'
+    sysctl_set: yes
+    state: present
+    reload: yes
+    ignoreerrors: true
+  when: package_check is failed
+
+- name: Set vm.overcommit_memory to 1
+  sysctl:
+    name: vm.overcommit_memory
+    value: '1'
+    sysctl_set: yes
+    state: present
+    reload: yes
+    ignoreerrors: true
+  when: package_check is failed
+
+- name: Set vm.vfs_cache_pressure to 1000
+  sysctl:
+    name: vm.vfs_cache_pressure
+    value: '1000'
+    sysctl_set: yes
+    state: present
+    reload: yes
+    ignoreerrors: true
+  when: package_check is failed
+
+- name: Set for ENVOY
+  sysctl:
+    name: fs.inotify.max_user_watches
+    value: '524288'
+    sysctl_set: yes
+    sysctl_file: /etc/sysctl.d/envoy.conf
+    reload: yes
+  when: package_check is failed   
+
+
+- name: "add immutable /etc/sysctl.conf"
+  file:
+    path: /etc/sysctl.conf
+    attr: +i
+  when: package_check is failed
+
+- name: "add immutable /etc/sysctl.d"
+  file:
+    path: /etc/sysctl.d
+    attr: +i
+  when: package_check is failed
+
+- name: Add the user 'envoy'
+  user:
+    name: envoy
+    shell: /sbin/nologin
+    home: /etc/envoy
+    expires: -1
+  when: package_check is failed
+
+- name: Create a directories and copy files
+  block:
+    - file:
+        path: /etc/envoy
+        state: directory
+        owner: root
+        group: envoy
+        mode: '0775'
+    - file:
+        path: /var/log/envoy
+        state: directory
+        owner: root
+        group: envoy
+        mode: '0770'
+    - copy:
+        src:  configs/tetrate-getenvoy-rpm-stable.repo
+        dest: /etc/yum.repos.d/tetrate-getenvoy-rpm-stable.repo
+        owner: root
+        group: root
+        mode: 0644
+    - copy:
+        src:  configs/envoy.service
+        dest: /etc/systemd/system/envoy.service
+        owner: root
+        group: root
+        mode: 0644
+    - copy:
+        src:  configs/envoy
+        dest: /etc/logrotate.d/envoy
+        owner: root
+        group: root
+        mode: 0644
+  when: package_check is failed
+
+- name: copy envoy.yaml
+  copy:
+    src: "{{inventory_hostname}}"
+    dest: /etc/envoy/envoy.yaml
+    owner: root
+    group: root
+    mode: 0644
+       
+- name: Install Envoy
+  yum:
+    name: 
+      - getenvoy-envoy
+      - python38
+    state: latest
+  when: package_check is failed
+
+- name: Correct python version selected
+  alternatives:
+    name: python
+    path: /usr/bin/python3
+  when: package_check is failed
+
+- name: Enable service envoy
+  service:
+    name: envoy
+    enabled: yes
+  when: package_check is failed
+    
+- name: Copy exec files
+  block:
+    - copy:
+        src:  configs/hot-restarter.py
+        dest: /usr/local/bin/hot-restarter.py
+        owner: root
+        group: root
+        mode: 0755
+    - copy:
+        src:  configs/start_envoy.sh
+        dest: /usr/local/bin/start_envoy.sh
+        owner: root
+        group: root
+        mode: 0755
+    - copy:
+        src:  configs/envoy_validate.sh
+        dest: /usr/local/sbin/envoy_validate.sh
+        owner: root
+        group: root
+        mode: 0755
+    - copy:
+        src:  configs/99-envoy.conf
+        dest: /etc/security/limits.d/99-envoy.conf
+        owner: root
+        group: root
+        mode: 0755    
+      notify: "Restart_rsyslog"
+  when: package_check is failed
+
+- name: Testing Envoy configuration
+  shell: envoy --mode validate -c /etc/envoy/envoy.yaml
+  register: Envoystatus
+  failed_when: "'critical' in Envoystatus.stderr"
+
+- name: Clearing logs before the first start
+  ansible.builtin.shell: rm -rf /var/log/envoy/*
+  when: package_check is failed
+
+- name: Start service envoy, if not started
+  ansible.builtin.service:
+    name: envoy
+    state: restarted
+  when: package_check is failed
+
+- name: Reload envoy config, if installed
+  ansible.builtin.service:
+    name: envoy
+    state: reloaded
+  when: package_check is not failed

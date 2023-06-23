@@ -1,0 +1,77 @@
+---
+- name: "Check if keepalived package is installed"
+  command: rpm -q keepalived
+  register: package_check
+  changed_when: false
+  ignore_errors: true
+
+- name: install keepalived
+  package:
+    name:
+      - keepalived
+    state: present
+  when: package_check is failed
+
+- name: Enable service keepalived
+  service:
+    name: keepalived
+    enabled: yes
+  when: package_check is failed
+
+- name: Load a variable for {{inventory_hostname}}
+  ansible.builtin.include_vars: "{{inventory_hostname}}"
+
+- name: Configure firewall for keepalived
+  blockinfile:
+    path: /etc/iptables.rules
+    marker: "### {mark} Managed by Ansible for keepalived ###"
+    block: |
+      {% for item in keepalived_list -%}
+      iptables -A INPUT -i {{ ansible_default_ipv4.interface }} -s {{ item }} -p vrrp -m comment --comment "keepalived" -j ACCEPT
+      {% endfor %}
+
+- name: Add rule firewall for keepalived
+  iptables:
+    chain: INPUT
+    protocol: vrrp
+    source: "{{ item }}"
+    ctstate: NEW
+    jump: ACCEPT
+    comment: keepalived
+    action: insert
+  loop: "{{ keepalived_list | list }}"
+
+- name: Set master node {{inventory_hostname}}
+  set_fact:
+    state: MASTER
+  when: inventory_hostname == keepalived_list[0]
+
+- name: Set backup node {{inventory_hostname}}
+  set_fact:
+    state: BACKUP
+  when: inventory_hostname != keepalived_list[0]
+
+- name: IPs for unicast_peer
+  command: "dig {{ item }} +short"
+  with_items: "{{ keepalived_list }}"
+  register: ips
+
+- name: "keepalived | copy configuration"
+  template:
+    src: "keepalived.conf.j2"
+    dest: "/etc/keepalived/keepalived.conf"
+    owner: "root"
+    group: "root"
+    mode: 0660
+
+- name: Start service keepalived, if not started
+  ansible.builtin.service:
+    name: keepalived
+    state: restarted
+  when: package_check is failed
+
+- name: Reload keepalived config, if installed
+  ansible.builtin.service:
+    name: keepalived
+    state: reloaded
+  when: package_check is not failed

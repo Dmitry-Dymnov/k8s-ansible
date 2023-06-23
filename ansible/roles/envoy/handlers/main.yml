@@ -1,0 +1,11 @@
+- name: "Restart_rsyslog"
+  service:
+    name: rsyslog
+    state: restarted
+    enabled: yes
+
+- name: "Restart_envoy"
+  service:
+    name: envoy
+    state: restarted
+    enabled: yes

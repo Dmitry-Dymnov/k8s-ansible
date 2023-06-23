@@ -1,0 +1,17 @@
+cluster-vip:
+  - 192.168.2.220
+
+load-balancers:
+  - k8s-lb-prod-1.local
+  - k8s-lb-prod-2.local
+
+k8s-masters:
+  - k8s-prod-m1.local
+  - k8s-prod-m2.local
+  - k8s-prod-m3.local
+
+k8s-workers:
+  - k8s-prod-w1.local
+  - k8s-prod-w2.local
+  - k8s-prod-w3.local
+  - k8s-prod-w4.local

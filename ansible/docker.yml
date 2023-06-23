@@ -1,0 +1,4 @@
+- hosts: docker
+  gather_facts: yes
+  roles:
+    - docker

@@ -1,0 +1,147 @@
+---
+- name: "remove immutable /etc/sysctl.conf /etc/sysctl.d"
+  file:
+    path: "{{ item }}"
+    attr: -i
+  loop:
+    - /etc/sysctl.conf
+    - /etc/sysctl.d
+
+- name: Set sysctl value
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    sysctl_set: yes
+    state: present
+    reload: yes
+    ignoreerrors: true
+  loop:
+    - { name: 'vm.swappiness', value: '1' }
+    - { name: 'vm.overcommit_memory', value: '1' }
+    - { name: 'vm.vfs_cache_pressure', value: '1000' }
+    - { name: 'net.ipv4.ip_forward', value: '1' }
+  tags: fix-core-param
+
+- name: "add immutable /etc/sysctl.conf /etc/sysctl.d"
+  file:
+    path: "{{ item }}"
+    attr: +i
+  loop:
+    - /etc/sysctl.conf
+    - /etc/sysctl.d
+
+- name: Check LVM vgdocker-lvdocker
+  stat:
+    path: /dev/mapper/vgdocker-lvdocker
+  register: check_docker_lvm
+
+- name: Check LVM docker-data
+  stat:
+    path: /dev/mapper/docker-data
+  register: check_docker_lvm2
+
+- name: Check disk /dev/sdb
+  stat:
+    path: /dev/sdb
+  register: check_docker_disk
+
+- name: Create LVM docker and mount docker disk
+  block:
+    - name: Create directory /var/lib/docker
+      file:
+        path: /var/lib/docker
+        state: directory
+        mode: 0755
+
+    - name: Create a volume group on /dev/sdb
+      lvg:
+        vg: vgdocker
+        pvs: /dev/sdb
+        pesize: 16
+        state: present
+
+    - name: Create a LVM with disk /dev/sdb
+      lvol:
+        vg: vgdocker
+        lv: lvdocker
+        size: 100%FREE
+        pvs: /dev/sdb
+
+    - name: format the ext4 filesystem
+      filesystem:
+        fstype: ext4
+        dev: /dev/mapper/vgdocker-lvdocker
+
+    - name: mount the /dev/mapper/vgdocker-lvdocker on /var/lib/docker
+      mount:
+        path: /var/lib/docker
+        src: /dev/mapper/vgdocker-lvdocker
+        fstype: ext4
+        state: mounted
+        dump: 1
+        passno: 2
+
+  when:
+    - check_docker_disk.stat.exists
+    - (not check_docker_lvm.stat.exists) and (not check_docker_lvm2.stat.exists )
+
+- name: delete runc
+  package:
+    name:
+      - runc
+    state: absent
+  ignore_errors: true
+  tags: install-docker
+
+- name: install yum-utils
+  package:
+    name:
+      - yum-utils
+    state: present
+  tags: install-docker
+
+- name: "Enable repo docker-ce"
+  shell: "yum config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo"
+  tags: install-docker
+
+- name: upgrade all packages
+  package: name=* state=latest
+  tags: install-docker
+
+- name: Install Docker
+  package:
+    name: 
+      - docker-ce
+      - containerd.io
+      - net-tools
+      - bind-utils
+    state: latest
+  tags: install-docker
+
+- name: Create a directory for docker config
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/docker
+    - /etc/systemd/system/docker.service.d
+  tags: install-docker
+
+- name: Copy the template daemon.json config
+  template:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+    owner: root
+    group: root
+    mode: 0644
+  notify: 
+    - Do systemctl daemon-reload and restart docker
+  tags: copy-daemon-json
+
+- name: "/etc/yum.conf add exclude=docker* containerd*"
+  lineinfile:
+    dest: /etc/yum.conf
+    state: present
+    regexp: '^exclude=docker* containerd*'
+    line: 'exclude=docker* containerd*'

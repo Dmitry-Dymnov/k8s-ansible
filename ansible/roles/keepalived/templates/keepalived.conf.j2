@@ -1,0 +1,28 @@
+global_defs {
+  vrrp_garp_master_delay 10
+  vrrp_garp_master_repeat 1
+  vrrp_garp_lower_prio_delay 10
+  vrrp_garp_lower_prio_repeat 1
+  vrrp_garp_master_refresh 5
+  vrrp_garp_master_refresh_repeat 2
+  vrrp_garp_interval 0.001
+  vrrp_gna_interval 0.000001
+}
+
+vrrp_instance k8s-lb {
+    state {{ state }}
+    interface {{ ansible_default_ipv4.interface }}
+    virtual_router_id {{ vr_id[0] }}
+    priority 100
+    advert_int 1
+    unicast_peer {
+        {{ ips.results | map(attribute='stdout') | join('\n') }}
+    }
+    authentication {
+        auth_type PASS
+        auth_pass 92Pa$$W0rD53
+    }
+    virtual_ipaddress {
+        {{ vip[0] }}
+    }
+}

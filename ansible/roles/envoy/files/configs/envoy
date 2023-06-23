@@ -1,0 +1,13 @@
+/var/log/envoy/*.log{
+        daily
+        su envoy envoy
+        missingok
+        rotate 3
+        compress
+        notifempty
+        create 644 envoy envoy
+        sharedscripts
+        postrotate
+            /bin/kill -SIGUSR1 $(ps -auxf | grep "python /usr/local/bin/hot-restarter.py /usr/local/bin/start_envoy.sh"|grep -v "grep" |awk '{print $2}')
+        endscript
+}

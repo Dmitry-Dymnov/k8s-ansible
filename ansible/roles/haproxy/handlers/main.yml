@@ -1,0 +1,13 @@
+---
+- name: Do restart rsyslog
+  systemd:
+    name: rsyslog
+    state: restarted
+    enabled: yes
+    daemon_reload: yes
+
+- name: haproxy enabled
+  systemd:
+    name: haproxy
+    enabled: yes
+    daemon_reload: yes

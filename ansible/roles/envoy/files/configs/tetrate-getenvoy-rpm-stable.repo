@@ -1,0 +1,47 @@
+# Source: Tetrate
+# Site: https://github.com/tetratelabs/getenvoy
+# Repository: Tetrate / getenvoy-rpm
+# Description: GeteEnvoy RPM Packages
+
+[tetrate-getenvoy-rpm-stable]
+name=tetrate-getenvoy-rpm-stable
+baseurl=https://rpm.dl.getenvoy.io/public/rpm/el/8/$basearch
+repo_gpgcheck=1
+enabled=1
+gpgkey=https://rpm.dl.getenvoy.io/public/gpg.CF716AF503183491.key
+gpgcheck=1
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+metadata_expire=300
+pkg_gpgcheck=1
+autorefresh=1
+type=rpm-md
+
+[tetrate-getenvoy-rpm-stable-noarch]
+name=tetrate-getenvoy-rpm-stable-noarch
+baseurl=https://rpm.dl.getenvoy.io/public/rpm/el/8/noarch
+repo_gpgcheck=1
+enabled=1
+gpgkey=https://rpm.dl.getenvoy.io/public/gpg.CF716AF503183491.key
+gpgcheck=1
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+metadata_expire=300
+pkg_gpgcheck=1
+autorefresh=1
+type=rpm-md
+
+[tetrate-getenvoy-rpm-stable-source]
+name=tetrate-getenvoy-rpm-stable-source
+baseurl=https://rpm.dl.getenvoy.io/public/rpm/el/8/SRPMS
+repo_gpgcheck=1
+enabled=1
+gpgkey=https://rpm.dl.getenvoy.io/public/gpg.CF716AF503183491.key
+gpgcheck=1
+sslverify=1
+sslcacert=/etc/pki/tls/certs/ca-bundle.crt
+metadata_expire=300
+pkg_gpgcheck=1
+autorefresh=1
+
+type=rpm-md

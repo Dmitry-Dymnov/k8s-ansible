@@ -14,10 +14,10 @@ before_script:
   - export DEFAULT_REMOTE_USER
   - export ANSIBLE_INVENTORY
   - export ANSIBLE_ROLES_PATH
-  - curl -s -H "Content-Type: application/json" -H "X-Vault-Token: \
+  - 'curl -s -H "Content-Type: application/json" -H "X-Vault-Token: \
       $(curl -s --request POST --data '{"role_id":"'"$VAULT_ROLE_ID"'","secret_id":"'"$VAULT_SECRET_ID"'"}' \
       $VAULT_URL/v1/auth/approle/login | jq -r .auth.client_token)" \
-      $VAULT_URL/v1/secret/gitlab-ci/ansible/config | jq -r .data.id_rsa > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa
+      $VAULT_URL/v1/secret/gitlab-ci/ansible/config | jq -r .data.id_rsa > /root/.ssh/id_rsa && chmod 600 /root/.ssh/id_rsa'
   - 'chmod +x ./ansible/scripts/*.sh'
   - 'find ./ansible/scripts/ -name "*.sh" -exec {} \;'
 
